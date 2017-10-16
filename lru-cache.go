@@ -109,7 +109,7 @@ func (c *Cache) Get(key string) (value interface{}, found bool) {
 		return nil, false
 	}
 
-	// Return the item to teh front of the queue
+	// Return the item to the front of the queue
 	c.order.MoveToFront(item.listElement)
 
 	return item.value, true
