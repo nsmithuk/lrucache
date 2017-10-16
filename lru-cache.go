@@ -1,3 +1,6 @@
+// Copyright 2017 Neil Smith. All rights reserved.
+// Use of this source code is governed by a MIT
+// license that can be found in the LICENSE file.
 package lrucache
 
 import(
@@ -17,6 +20,7 @@ type Cache struct {
 	currentSize uint64
 }
 
+// An item within the cache
 type Item struct {
 	size uint64
 	value interface{}
@@ -24,17 +28,16 @@ type Item struct {
 }
 
 func New(sizeInBytes uint64) *Cache {
-
 	return &Cache{
 		order: list.New(),
 		maxSize: sizeInBytes,
 		currentSize: 0,
 		items: make(map[string]*Item),
 	}
-
 }
 
-
+// Adds a key/value pair to the cache.
+// If a key already exists, this overwrites it.
 func (c *Cache) Set(key string, value interface{}, size uint64) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -95,7 +98,8 @@ func (c *Cache) Set(key string, value interface{}, size uint64) error {
 	return nil
 }
 
-func (c *Cache) Get(key string) (value interface{}, ok bool) {
+// Return a key's value from the cache.
+func (c *Cache) Get(key string) (value interface{}, found bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -111,6 +115,7 @@ func (c *Cache) Get(key string) (value interface{}, ok bool) {
 	return item.value, true
 }
 
+// Deletes a key's value from the cache.
 func (c *Cache) Delete(key string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -122,6 +127,7 @@ func (c *Cache) Delete(key string) {
 
 //----------------------------------------------------
 
+// Internal method for removing an item for both the map and the list.
 func (c *Cache) removeItem(item *Item) {
 
 	key := item.listElement.Value.(string)
