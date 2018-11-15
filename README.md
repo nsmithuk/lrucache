@@ -4,7 +4,7 @@ A simple thread-safe LRU cache, written in go. The cache's cap is based on the
 number of bytes stored within it, as opposed to the number of items.
 
 ```sh
-go get -u github.com/NSmithUK/lru-cache-go
+go get -u github.com/nsmithuk/lru-cache-go
 ```
 
 ### Create a new cache
