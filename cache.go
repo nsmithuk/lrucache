@@ -17,6 +17,11 @@ const (
 	// i.e. nodes will only be removed when pushed beyond the tail, or purged if `PurgeExpiredEventsWhenCacheIsFull` is true.
 	DefaultPurgeTimerInterval = 0
 
+	// DefaultBufferSize zero essentially means no buffer, thus everything is strongly consistent.
+	// Any other value will result in the list-ordering being eventually consistent when a Get() is called.
+	// Note that Set() and Delete() calls are always strongly consistent.
+	DefaultBufferSize = 0
+
 	DefaultPurgeExpiredEventsWhenCacheIsFull = false
 )
 
@@ -64,7 +69,7 @@ type node[K comparable, V any] struct {
 }
 
 func NewCache[K comparable, V any](capacity uint64) *Cache[K, V] {
-	return NewCacheWithBufferAndInterval[K, V](capacity, 0, DefaultPurgeTimerInterval)
+	return NewCacheWithBufferAndInterval[K, V](capacity, DefaultBufferSize, DefaultPurgeTimerInterval)
 }
 
 func NewCacheWithBuffer[K comparable, V any](capacity uint64, buffer uint16) *Cache[K, V] {
@@ -72,7 +77,7 @@ func NewCacheWithBuffer[K comparable, V any](capacity uint64, buffer uint16) *Ca
 }
 
 func NewCacheWithInterval[K comparable, V any](capacity uint64, interval time.Duration) *Cache[K, V] {
-	return NewCacheWithBufferAndInterval[K, V](capacity, 0, interval)
+	return NewCacheWithBufferAndInterval[K, V](capacity, DefaultBufferSize, interval)
 }
 
 // NewCacheWithBufferAndInterval creates a new LRU cache with the specified capacity and event buffer size.
