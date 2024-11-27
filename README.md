@@ -113,6 +113,7 @@ A few helper functions exist for creating a new cache using default values for t
   cache := lrucache.NewCache[int, string](100)
 ```
 
+---
 ### 2. Add items to the cache
 
 You can add items in to the cache using the `Set` method or its variants, depending on whether you want to specify additional details like the item's size or expiry time.
@@ -149,6 +150,7 @@ The Set methods return an error if:
 - The item's size exceeds the cache's total capacity.
 - The specified expiry time is in the past.
 
+---
 ### 3. Get items from the cache
 
 You can retrieve items from the cache using the `Get` method. This method returns the value associated with the key and a boolean indicating whether the item was found.
@@ -168,6 +170,7 @@ if found {
 - Items accessed with Get are considered "used" and will be moved to the front of the LRU list. This ensures frequently accessed items remain in the cache.
 - If the cache is configured with eventual consistency (a non-zero buffer size), the "most recently used" status may be updated asynchronously.
 
+---
 ### 4. Delete items from the cache
 
 You can remove items from the cache using the `Delete` method. This method ensures that the specified key and its associated value are removed from the cache, if they exist.
