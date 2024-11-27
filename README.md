@@ -42,7 +42,7 @@ For cases where items have varying sizes, you can use a custom cost metric. For 
 
 This ensures the combined size of all items in the cache never exceeds 100 MB (excluding the cache's overhead).
 
-#### Key Notes
+#### Notes
 
 - The size of an item does not affect its **ordering** or **retention prioritisation** in the cache. It only determines how much of the cache's total capacity the item consumes.
 - It is the responsibility of the user/caller to define a suitable capacity unit for the cache and determine the size of each item. For example, if you choose bytes as the unit:
