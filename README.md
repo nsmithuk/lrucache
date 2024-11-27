@@ -113,6 +113,41 @@ A few helper functions exist for creating a new cache using default values for t
   cache := lrucache.NewCache[int, string](100)
 ```
 
+### 2. Add items to the cache
+
+You can add items to the cache using the `Set` method or its variants, depending on whether you want to specify additional details like the item's size or expiry time.
+
+#### Basic Insertion
+Use `Set` to add a key-value pair with a default size of 1 and no expiry:
+```go
+cache.Set(1, "value1")
+```
+
+#### Specifying Size
+If your items have varying sizes, use `SetWithSize` to add a key-value pair and specify its size:
+```go
+cache.SetWithSize(2, "value2", 5) // Adds the item with a size of 5
+```
+
+#### Setting an Expiry Time
+Use `SetWithExpiry` to add a key-value pair that expires after a specified duration:
+```go
+expiry := time.Now().Add(10 * time.Minute) // Item expires in 10 minutes
+cache.SetWithExpiry(3, "value3", expiry)
+```
+
+#### Combining Size and Expiry
+You can use SetWithSizeAndExpiry to add a key-value pair with both size and expiry details:
+```go
+expiry := time.Now().Add(5 * time.Minute) // Item expires in 5 minutes
+cache.SetWithSizeAndExpiry("key4", "value4", 3, expiry) // Adds item with size 3
+```
+
+#### Errors
+The Set methods return an error if:
+- The item's size is `< 1`.
+- The item's size exceeds the cache's total capacity.
+- The specified expiry time is in the past.
 
 ## License
 

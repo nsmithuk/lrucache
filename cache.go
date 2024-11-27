@@ -171,6 +171,10 @@ func (lru *Cache[K, V]) SetWithExpiry(k K, v V, expires time.Time) error {
 // If the size exceeds the cache's capacity or the expiry time is in the past, an error is returned.
 func (lru *Cache[K, V]) SetWithSizeAndExpiry(k K, v V, size uint64, expires time.Time) error {
 
+	if size == 0 {
+		return fmt.Errorf("%w: item size = %d", ErrItemTooSmall, size)
+	}
+
 	if size > lru.capacity {
 		return fmt.Errorf("%w: item size = %d. cache capacity = %d", ErrItemTooBig, size, lru.capacity)
 	}

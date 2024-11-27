@@ -309,6 +309,13 @@ func TestCache_ErrorHandling(t *testing.T) {
 
 	//---
 
+	// THe size cannot be zero.
+	err = cache.SetWithSize(1, "value1", 0)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrItemTooSmall)
+
+	//---
+
 	// This is a valid size, but has an expiry set in the past
 	err = cache.SetWithSizeAndExpiry(1, "value1", 1, time.Now().Add(-1*time.Second))
 	assert.Error(t, err)
