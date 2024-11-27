@@ -72,6 +72,11 @@ func main() {
   defer cache.Close()
 }
 ```
+
+> [!IMPORTANT]
+> Call `cache.Close()` when you are finished with the cache to ensure that all associated goroutines are properly terminated.
+
+
 #### Parameter Details
 
 - **Key Type** (`int` in the example):  
