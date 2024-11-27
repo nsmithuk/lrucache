@@ -115,7 +115,7 @@ A few helper functions exist for creating a new cache using default values for t
 
 ### 2. Add items to the cache
 
-You can add items to the cache using the `Set` method or its variants, depending on whether you want to specify additional details like the item's size or expiry time.
+You can add items in to the cache using the `Set` method or its variants, depending on whether you want to specify additional details like the item's size or expiry time.
 
 #### Basic Insertion
 Use `Set` to add a key-value pair with a default size of 1 and no expiry:
@@ -124,13 +124,13 @@ cache.Set(1, "value1")
 ```
 
 #### Specifying Size
-If your items have varying sizes, use `SetWithSize` to add a key-value pair and specify its size:
+If your items have varying sizes and no expiry, use `SetWithSize` to add a key-value pair and specify its size:
 ```go
 cache.SetWithSize(2, "value2", 5) // Adds the item with a size of 5
 ```
 
 #### Setting an Expiry Time
-Use `SetWithExpiry` to add a key-value pair that expires after a specified duration:
+Use `SetWithExpiry` to add a key-value pair, with a default size of 1, that expires after a specified duration:
 ```go
 expiry := time.Now().Add(10 * time.Minute) // Item expires in 10 minutes
 cache.SetWithExpiry(3, "value3", expiry)
@@ -140,7 +140,7 @@ cache.SetWithExpiry(3, "value3", expiry)
 You can use SetWithSizeAndExpiry to add a key-value pair with both size and expiry details:
 ```go
 expiry := time.Now().Add(5 * time.Minute) // Item expires in 5 minutes
-cache.SetWithSizeAndExpiry("key4", "value4", 3, expiry) // Adds item with size 3
+cache.SetWithSizeAndExpiry(4, "value4", 3, expiry) // Adds item with size 3
 ```
 
 #### Errors
@@ -148,6 +148,41 @@ The Set methods return an error if:
 - The item's size is `< 1`.
 - The item's size exceeds the cache's total capacity.
 - The specified expiry time is in the past.
+
+### 3. Get items from the cache
+
+You can retrieve items from the cache using the `Get` method. This method returns the value associated with the key and a boolean indicating whether the item was found.
+```go
+value, found := cache.Get(1)
+if found {
+	fmt.Println("Found:", value)
+} else {
+	fmt.Println("Key not found or has expired")
+}
+```
+- If the key exists in the cache and has not expired, the value is returned along with true.
+- If the key does not exist or the item has expired, the zero value for the value's type is returned along with false.
+
+#### Notes
+- You cannot distinguish between an item that does not exist and an item that has expired. We always treat an expired item as if it does not exist from the caller's perspective.
+- Items accessed with Get are considered "used" and will be moved to the front of the LRU list. This ensures frequently accessed items remain in the cache.
+- If the cache is configured with eventual consistency (a non-zero buffer size), the "most recently used" status may be updated asynchronously.
+
+### 4. Delete items from the cache
+
+You can remove items from the cache using the `Delete` method. This method ensures that the specified key and its associated value are removed from the cache, if they exist.
+
+To delete an item by its key:
+```go
+cache.Delete(1)
+```
+- If the key exists in the cache, the associated item is removed.
+- If the key does not exist, the operation does nothing.
+
+#### Notes
+- Deleting an item does not return an error or confirmation, as it is safe to call Delete on non-existent keys.
+- Once an item is deleted, it will no longer be accessible through the Get method, even if it was not expired.
+- The deletion operation is strongly consistent, regardless of the cache's configuration for eventual consistency.
 
 ## License
 
