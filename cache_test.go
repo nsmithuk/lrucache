@@ -418,3 +418,44 @@ func TestCache_TimerBasedPurge(t *testing.T) {
 	assert.Equal(t, uint64(0), cache.Size())
 	assert.Equal(t, uint64(0), cache.EntryCount())
 }
+
+func TestCache_CorrectSizeCalculationOnUpdate(t *testing.T) {
+
+	cache := NewCache[int, string](1)
+	defer cache.Close()
+
+	err := cache.Set(1, "value1")
+	assert.NoError(t, err)
+
+	assert.Equal(t, uint64(1), cache.EntryCount())
+	assert.Equal(t, uint64(1), cache.Size())
+
+	//---
+
+	err = cache.Set(1, "value1-updated")
+	assert.NoError(t, err)
+
+	assert.Equal(t, uint64(1), cache.EntryCount())
+	assert.Equal(t, uint64(1), cache.Size())
+
+	cache.Get(1)
+	cache.Get(1)
+	cache.Get(1)
+	cache.Set(2, "value2")
+
+	_, found := cache.Get(1)
+	assert.False(t, found)
+
+	_, found = cache.Get(2)
+	assert.True(t, found)
+
+	assert.Equal(t, uint64(1), cache.EntryCount())
+	assert.Equal(t, uint64(1), cache.Size())
+}
+
+func TestCache_Something(t *testing.T) {
+
+	cache := NewCache[int, string](1)
+	defer cache.Close()
+
+}

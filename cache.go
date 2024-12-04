@@ -44,12 +44,10 @@ type Cache[K comparable, V any] struct {
 	head *node[K, V] // Pointer to the most recently used node.
 	tail *node[K, V] // Pointer to the least recently used node.
 
-	lock   sync.RWMutex     // Lock for synchronising read/write operations.
+	lock   AssertRWLock     // Lock for synchronising read/write operations.
 	events chan event[K, V] // Channel for handling cache events asynchronously.
 	done   chan bool        // Channel for signalling cache shutdown.
 	close  sync.Once        // Ensures Close method runs only once.
-
-	pool sync.Pool // Pool of reusable node objects to minimise allocations.
 
 	purgeInterval time.Duration
 
@@ -66,6 +64,7 @@ type node[K comparable, V any] struct {
 	next     *node[K, V] // Pointer to the next node in the linked list.
 	key      K           // Key associated with the cache entry.
 	value    V           // Value stored in the cache entry.
+	deleted  bool
 }
 
 func NewCache[K comparable, V any](capacity uint64) *Cache[K, V] {
@@ -96,13 +95,6 @@ func NewCacheWithBufferAndInterval[K comparable, V any](capacity uint64, buffer 
 		events: make(chan event[K, V], buffer),
 
 		purgeInterval: interval,
-
-		// Using a sync.Pool for node reuse to reduce memory allocations.
-		pool: sync.Pool{
-			New: func() any {
-				return new(node[K, V])
-			},
-		},
 	}
 
 	// Initialise the linked list with the head and tail nodes.
@@ -183,12 +175,12 @@ func (lru *Cache[K, V]) SetWithSizeAndExpiry(k K, v V, size uint64, expires time
 		return fmt.Errorf("%w. expires is set to %s, but the current time is %s", ErrPastExpiry, expires.Format(DateTime), time.Now().Format(DateTime))
 	}
 
-	// Reuse a node from the pool or create a new one.
-	n := lru.pool.Get().(*node[K, V])
-	n.key = k
-	n.value = v
-	n.size = size
-	n.expires = expires
+	n := &node[K, V]{
+		key:     k,
+		value:   v,
+		size:    size,
+		expires: expires,
+	}
 
 	lru.lock.Lock()
 
@@ -200,7 +192,7 @@ func (lru *Cache[K, V]) SetWithSizeAndExpiry(k K, v V, size uint64, expires time
 	spaceAvailable := lru.capacity - lru.size
 	if spaceAvailable < size {
 		if PurgeExpiredEventsWhenCacheIsFull {
-			lru.events <- event[K, V]{a: EventActionRemoveExpired, n: n}
+			lru.events <- event[K, V]{a: EventActionRemoveExpired}
 		}
 
 		wg := &sync.WaitGroup{}
@@ -211,7 +203,7 @@ func (lru *Cache[K, V]) SetWithSizeAndExpiry(k K, v V, size uint64, expires time
 
 	// Add the new node to the cache and update the size.
 	lru.cache[k] = n
-	lru.size = lru.size + size
+	lru.size = lru.size + n.size
 
 	lru.lock.Unlock()
 

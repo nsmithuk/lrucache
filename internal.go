@@ -20,8 +20,8 @@ func (lru *Cache[K, V]) purgeExpired(dur time.Duration) {
 			// Send an event to remove expired entries.
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
-			lru.events <- event[K, V]{a: EventActionRemoveExpired, n: nil, finished: wg}
-			wg.Wait() // Wait for the operation to complete.
+			lru.events <- event[K, V]{a: EventActionRemoveExpired, finished: wg}
+			wg.Wait()
 
 			lru.lock.Unlock()
 		}
@@ -39,17 +39,8 @@ func (lru *Cache[K, V]) deleteNode(n *node[K, V]) {
 	wg.Wait() // Wait for the node removal to complete.
 }
 
-// returnToPool resets a node's fields and returns it to the pool for reuse.
-// - n: The node to be returned to the pool.
-func (lru *Cache[K, V]) returnToPool(n *node[K, V]) {
-	// Reset the node's fields to avoid retaining references.
-	n.key = lru.emptyK
-	n.value = lru.emptyV
-	n.previous = nil
-	n.next = nil
-
-	// Put the node back into the pool.
-	lru.pool.Put(n)
+func (n *node[K, V]) flagAsDeleted() {
+	n.deleted = true
 }
 
 // processEvents processes all events sent to the cache's event channel.
@@ -58,45 +49,54 @@ func (lru *Cache[K, V]) processEvents() {
 	for e := range lru.events {
 		switch e.a {
 		case EventActionRemove:
+			lru.lock.AssertLocked()
+
 			// Remove a node from the cache.
 			// Assumes the lock is already acquired.
 			delete(lru.cache, e.n.key)
 			lru.removeNodeFromList(e.n)
 			lru.size -= e.n.size
-			lru.returnToPool(e.n)
+			e.n.flagAsDeleted()
 
 		case EventActionAddToFront:
 			// Move a node to the front of the list (most recently used).
-			lru.addNodeToHead(e.n)
+
+			// Validate that it's not been removed since being added to the buffer.
+			if !e.n.deleted {
+				lru.addNodeToHead(e.n)
+			}
 
 		case EventActionMakeSpaceFor:
 			// Free up space in the cache for a new entry.
 			// Assumes the lock is already acquired.
 			spaceAvailable := lru.capacity - lru.size
 			for spaceAvailable < e.n.size {
+				lru.lock.AssertLocked()
+
 				removed := lru.removeNodeFromTail()
 				delete(lru.cache, removed.key)
 
-				// Update the cache size and space available.
 				lru.size -= removed.size
 				spaceAvailable = lru.capacity - lru.size
-				lru.returnToPool(removed)
+				removed.flagAsDeleted()
 			}
 
 		case EventActionRemoveExpired:
 			// Remove all expired entries from the cache.
 			// Assumes the lock is already acquired.
-			for k, n := range lru.cache {
-				if !n.expires.IsZero() && n.expires.Before(time.Now()) {
-					delete(lru.cache, k)
+			now := time.Now()
+			for _, n := range lru.cache {
+				if !n.expires.IsZero() && n.expires.Before(now) {
+					lru.lock.AssertLocked()
+
+					delete(lru.cache, n.key)
 					lru.removeNodeFromList(n)
 					lru.size -= n.size
-					lru.returnToPool(n)
+					n.flagAsDeleted()
 				}
 			}
 
 		default:
-			// Panic if an unknown event type is received.
 			panic("unknown action")
 		}
 
